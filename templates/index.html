@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CNN CIFAR-10 — Classificateur</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+</head>
+<body>
+
+     <!-- HEADER — Barre de navigation supérieure-->  
+  
+  <header class="navbar">
+    <div class="navbar-brand">
+      <!-- Logo texte avec accent coloré -->
+      <span class="brand-icon">⬡</span>
+      <span class="brand-name">Deep<span class="accent">CNN</span></span>
+    </div>
+    <nav class="navbar-links">
+      <a href="#classifier" class="nav-link active">Classifier</a>
+      <a href="#dashboard"  class="nav-link">Dashboard</a>
+      <a href="#architecture" class="nav-link">Architecture</a>
+      <a href="#lstm"         class="nav-link">LSTM</a>
+    </nav>
+    <!-- Badge indiquant la précision du modèle -->
+    <div class="navbar-badge">
+      <span class="badge-dot"></span>
+      Modèle actif — 84.83%
+    </div>
+  </header>
+
+  <!-- 
+       HERO — Section d'introduction
+  -->
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-tag">TensorFlow · Keras · CNN</div>
+      <h1 class="hero-title">
+        Classification d'Images
+        <span class="gradient-text">CIFAR-10</span>
+      </h1>
+      <p class="hero-subtitle">
+        Réseau de neurones convolutif entraîné sur 40 000 images.
+        Glissez une image pour obtenir une prédiction instantanée.
+      </p>
+      <!-- Statistiques rapides -->
+      <div class="hero-stats">
+        <div class="stat-item">
+          <span class="stat-value">84.83%</span>
+          <span class="stat-label">Précision</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-value">10</span>
+          <span class="stat-label">Classes</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-value">1.5M</span>
+          <span class="stat-label">Paramètres</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-value">50</span>
+          <span class="stat-label">Époques</span>
+        </div>
+      </div>
+    </div>
+    <!-- Particules décoratives animées -->
+    <div class="hero-particles">
+      <div class="particle p1"></div>
+      <div class="particle p2"></div>
+      <div class="particle p3"></div>
+      <div class="particle p4"></div>
+      <div class="particle p5"></div>
+    </div>
+  </section>
+
+  <!-- 
+       SECTION CLASSIFIER — Zone de prédiction principale
+  -->
+  <section class="section" id="classifier">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Classificateur</h2>
+        <p class="section-subtitle">
+          Uploadez une image — le CNN prédit sa classe en temps réel
+        </p>
+      </div>
+
+      <div class="classifier-grid">
+
+        <!--  Panneau gauche : Upload  -->
+        <div class="card upload-card">
+          <div class="card-header">
+            <span class="card-icon">📤</span>
+            <span class="card-title">Image d'entrée</span>
+          </div>
+
+          <!-- Zone de drop -->
+          <div class="drop-zone" id="dropZone">
+            <div class="drop-icon">⬆</div>
+            <p class="drop-text">Glissez une image ici</p>
+            <p class="drop-hint">ou cliquez pour parcourir</p>
+            <p class="drop-formats">PNG · JPG · JPEG · BMP</p>
+            <!-- Input caché déclenché par le clic -->
+            <input type="file" id="fileInput"
+                   accept="image/*" style="display:none"/>
+          </div>
+
+          <!-- Prévisualisation de l'image uploadée -->
+          <div class="preview-zone" id="previewZone" style="display:none">
+            <img id="previewImg" class="preview-img" src="" alt="preview"/>
+            <div class="preview-info">
+              <span id="previewName" class="preview-name"></span>
+              <button class="btn-reset" id="resetBtn">✕ Changer</button>
+            </div>
+          </div>
+
+          <!-- Bouton de prédiction -->
+          <button class="btn-predict" id="predictBtn" disabled>
+            <span class="btn-icon">⚡</span>
+            <span class="btn-text">Lancer la prédiction</span>
+          </button>
+
+          <!-- Classes disponibles -->
+          <div class="classes-grid">
+            <span class="class-tag"> avion</span>
+            <span class="class-tag"> automobile</span>
+            <span class="class-tag">oiseau</span>
+            <span class="class-tag">chat</span>
+            <span class="class-tag">cerf</span>
+            <span class="class-tag">chien</span>
+            <span class="class-tag">grenouille</span>
+            <span class="class-tag"> cheval</span>
+            <span class="class-tag"> bateau</span>
+            <span class="class-tag"> camion</span>
+          </div>
+        </div>
+
+        <!-- - Panneau droit : Résultats  -->
+        <div class="card result-card">
+          <div class="card-header">
+            <span class="card-icon"></span>
+            <span class="card-title">Résultat de prédiction</span>
+          </div>
+
+          <!-- État initial (avant prédiction) -->
+          <div class="result-placeholder" id="resultPlaceholder">
+            <div class="placeholder-icon"></div>
+            <p class="placeholder-text">
+              En attente d'une image...
+            </p>
+            <p class="placeholder-hint">
+              Uploadez une image et cliquez sur "Lancer la prédiction"
+            </p>
+          </div>
+
+          <!-- Loader animé (pendant la prédiction) -->
+          <div class="result-loader" id="resultLoader" style="display:none">
+            <div class="loader-ring"></div>
+            <p class="loader-text">Analyse en cours...</p>
+          </div>
+
+          <!-- Résultats (après prédiction) -->
+          <div class="result-content" id="resultContent" style="display:none">
+
+            <!-- Prédiction principale -->
+            <div class="prediction-main">
+              <div class="prediction-emoji" id="predEmoji"></div>
+              <div class="prediction-info">
+                <div class="prediction-class" id="predClass"></div>
+                <div class="prediction-conf" id="predConf"></div>
+              </div>
+              <!-- Jauge de confiance circulaire -->
+              <div class="confidence-ring">
+                <svg viewBox="0 0 80 80" class="ring-svg">
+                  <circle cx="40" cy="40" r="32"
+                          class="ring-bg"/>
+                  <circle cx="40" cy="40" r="32"
+                          class="ring-fill" id="ringFill"/>
+                </svg>
+                <span class="ring-value" id="ringValue"></span>
+              </div>
+            </div>
+
+            <!-- Image prétraitée (32×32 agrandie) -->
+            <div class="preview-processed">
+              <p class="preview-label">Image vue par le CNN (32×32)</p>
+              <img id="processedImg" class="processed-img" src="" alt=""/>
+            </div>
+
+            <!-- Barres de probabilité pour toutes les classes -->
+            <div class="probabilities">
+              <p class="prob-title">Probabilités par classe</p>
+              <div class="prob-list" id="probList"></div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================
+       SECTION DASHBOARD — Statistiques du modèle
+  ======================================================== -->
+  <section class="section section-dark" id="dashboard">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Dashboard</h2>
+        <p class="section-subtitle">
+          Performances du modèle CustomCNN entraîné
+        </p>
+      </div>
+
+      <!-- Cartes de métriques -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-icon"></div>
+          <div class="metric-value accent-green">84.83%</div>
+          <div class="metric-label">Test Accuracy</div>
+          <div class="metric-sub">Sur 10 000 images</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon"></div>
+          <div class="metric-value accent-blue">0.4599</div>
+          <div class="metric-label">Test Loss</div>
+          <div class="metric-sub">CrossEntropy</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon"></div>
+          <div class="metric-value accent-purple">1.5M</div>
+          <div class="metric-label">Paramètres</div>
+          <div class="metric-sub">Poids entraînés</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon">⏱</div>
+          <div class="metric-value accent-orange">50</div>
+          <div class="metric-label">Époques</div>
+          <div class="metric-sub">EarlyStopping</div>
+        </div>
+      </div>
+
+      <!-- Barres de précision par classe -->
+      <div class="card class-scores-card">
+        <div class="card-header">
+          <span class="card-icon"></span>
+          <span class="card-title">Précision par classe</span>
+        </div>
+        <div class="class-bars" id="classBars">
+          <!-- Généré dynamiquement par JS -->
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========================================================
+       SECTION ARCHITECTURE — Détail du réseau
+  ======================================================== -->
+  <section class="section" id="architecture">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Architecture</h2>
+        <p class="section-subtitle">
+          Structure du réseau CustomCNN — API Subclassing Keras
+        </p>
+      </div>
+
+      <div class="arch-grid">
+
+        <!-- Colonne gauche : blocs -->
+        <div class="arch-blocks">
+
+          <div class="arch-block input-block">
+            <div class="arch-block-label">Entrée</div>
+            <div class="arch-block-desc">Image 32 × 32 × 3</div>
+          </div>
+          <div class="arch-arrow">↓</div>
+
+          <div class="arch-block aug-block">
+            <div class="arch-block-label">Augmentation</div>
+            <div class="arch-block-desc">
+              RandomFlip · RandomRotation · RandomZoom
+            </div>
+          </div>
+          <div class="arch-arrow">↓</div>
+
+          <div class="arch-block conv-block">
+            <div class="arch-block-label">Bloc Conv 1</div>
+            <div class="arch-block-desc">
+              Conv2D(32) × 2 → BN → MaxPool → Dropout(0.25)
+            </div>
+            <div class="arch-block-shape">→ 16 × 16 × 32</div>
+          </div>
+          <div class="arch-arrow">↓</div>
+
+          <div class="arch-block conv-block">
+            <div class="arch-block-label">Bloc Conv 2</div>
+            <div class="arch-block-desc">
+              Conv2D(64) × 2 → BN → MaxPool → Dropout(0.25)
+            </div>
+            <div class="arch-block-shape">→ 8 × 8 × 64</div>
+          </div>
+          <div class="arch-arrow">↓</div>
+
+          <div class="arch-block conv-block">
+            <div class="arch-block-label">Bloc Conv 3</div>
+            <div class="arch-block-desc">
+              Conv2D(128) × 2 → BN → MaxPool → Dropout(0.25)
+            </div>
+            <div class="arch-block-shape">→ 4 × 4 × 128</div>
+          </div>
+          <div class="arch-arrow">↓</div>
+
+          <div class="arch-block dense-block">
+            <div class="arch-block-label">Classificateur MLP</div>
+            <div class="arch-block-desc">
+              Flatten → Dense(512) → Dropout(0.5)
+              → Dense(256) → Dropout(0.5)
+            </div>
+          </div>
+          <div class="arch-arrow">↓</div>
+
+          <div class="arch-block output-block">
+            <div class="arch-block-label">Sortie</div>
+            <div class="arch-block-desc">
+              Dense(10) · Softmax → 10 classes
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Colonne droite : infos techniques -->
+        <div class="arch-info">
+          <div class="info-card">
+            <h3 class="info-title">Compilation</h3>
+            <div class="info-row">
+              <span class="info-key">Optimiseur</span>
+              <span class="info-val">Adam (lr=0.001)</span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">Perte</span>
+              <span class="info-val">SparseCatCrossentropy</span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">Métrique</span>
+              <span class="info-val">Accuracy</span>
+            </div>
+          </div>
+
+          <div class="info-card">
+            <h3 class="info-title">Callbacks</h3>
+            <div class="info-row">
+              <span class="info-key">EarlyStopping</span>
+              <span class="info-val">patience=8</span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">ModelCheckpoint</span>
+              <span class="info-val">best val_acc</span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">ReduceLROnPlateau</span>
+              <span class="info-val">factor=0.5</span>
+            </div>
+          </div>
+
+          <div class="info-card">
+            <h3 class="info-title">Dataset</h3>
+            <div class="info-row">
+              <span class="info-key">Train</span>
+              <span class="info-val">40 000 images</span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">Validation</span>
+              <span class="info-val">10 000 images</span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">Test</span>
+              <span class="info-val">10 000 images</span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">Taille</span>
+              <span class="info-val">32 × 32 × 3</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+<!-- ========================================================
+       SECTION LSTM — Prédiction boursière Tesla
+  ======================================================== -->
+  <section class="section section-dark" id="lstm">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">
+          Prédiction Boursière
+          <span class="gradient-text">LSTM</span>
+        </h2>
+        <p class="section-subtitle">
+          Réseau LSTM entraîné sur 5 ans de données Tesla (TSLA)
+          — Prédit le prix High du lendemain
+        </p>
+      </div>
+
+      <!-- Statistiques du modèle LSTM -->
+      <div class="metrics-grid" style="margin-bottom:2rem">
+        <div class="metric-card">
+          <div class="metric-icon"></div>
+          <div class="metric-value accent-cyan">7.91%</div>
+          <div class="metric-label">MAPE</div>
+          <div class="metric-sub">Erreur moyenne %</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon">💰</div>
+          <div class="metric-value accent-green">$11.04</div>
+          <div class="metric-label">MAE / jour</div>
+          <div class="metric-sub">Erreur absolue moyenne</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon"></div>
+          <div class="metric-value accent-purple">LSTM×2</div>
+          <div class="metric-label">Architecture</div>
+          <div class="metric-sub">128 → 64 neurones</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon">📅</div>
+          <div class="metric-value accent-orange">60</div>
+          <div class="metric-label">Fenêtre</div>
+          <div class="metric-sub">Jours en entrée</div>
+        </div>
+      </div>
+
+      <div class="classifier-grid">
+
+        <!-- ---- Panneau gauche : Prédiction ---- -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-icon">🔮</span>
+            <span class="card-title">Prédiction J+1 — TSLA High</span>
+          </div>
+
+          <!-- Bouton de prédiction LSTM -->
+          <div style="text-align:center; padding: 1.5rem 0;">
+            <div class="lstm-ticker">
+              <span class="ticker-symbol">TSLA</span>
+              <span class="ticker-name">Tesla, Inc.</span>
+            </div>
+
+            <!-- Prix actuel -->
+            <div class="lstm-current">
+              <span class="lstm-label">Dernier prix connu</span>
+              <span class="lstm-price" id="lstmLastPrice">—</span>
+              <span class="lstm-date"  id="lstmLastDate">—</span>
+            </div>
+
+            <!-- Bouton -->
+            <button class="btn-predict" id="lstmPredictBtn"
+                    style="margin-top:1.5rem">
+              <span class="btn-icon">⚡</span>
+              <span class="btn-text">Prédire le prix de demain</span>
+            </button>
+          </div>
+
+          <!-- Résultat de prédiction LSTM -->
+          <div class="lstm-result" id="lstmResult" style="display:none">
+            <div class="lstm-result-header">
+              <span class="lstm-result-label">Prix High prédit (J+1)</span>
+            </div>
+            <div class="lstm-result-price" id="lstmPredPrice">—</div>
+            <div class="lstm-signal" id="lstmSignal">—</div>
+            <div class="lstm-variation" id="lstmVariation">—</div>
+            <div class="lstm-disclaimer">
+              ⚠️ Prédiction à titre éducatif uniquement — pas un conseil financier
+            </div>
+          </div>
+
+          <!-- Loader LSTM -->
+          <div class="result-loader" id="lstmLoader" style="display:none">
+            <div class="loader-ring"></div>
+            <p class="loader-text">Analyse LSTM en cours...</p>
+          </div>
+
+        </div>
+
+        <!-- ---- Panneau droit : Graphique historique ---- -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-icon"></span>
+            <span class="card-title">Historique TSLA High — 120 derniers jours</span>
+          </div>
+
+          <!-- Canvas Chart.js -->
+          <div class="chart-container">
+            <canvas id="lstmChart"></canvas>
+          </div>
+
+          <!-- Légende du graphique -->
+          <div class="chart-legend">
+            <div class="legend-item">
+              <span class="legend-dot" style="background:#00d4ff"></span>
+              <span>Prix High journalier ($)</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot" style="background:#10b981"></span>
+              <span>Prédiction J+1</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Architecture LSTM détaillée -->
+      <div class="card" style="margin-top:1.5rem">
+        <div class="card-header">
+          <span class="card-icon"></span>
+          <span class="card-title">Architecture StockLSTM — Détail</span>
+        </div>
+        <div class="arch-grid">
+          <div class="arch-blocks">
+            <div class="arch-block input-block">
+              <div class="arch-block-label">Entrée</div>
+              <div class="arch-block-desc">
+                Séquence (batch, 60 jours, 1 feature) — Prix High normalisé
+              </div>
+            </div>
+            <div class="arch-arrow">↓</div>
+            <div class="arch-block conv-block">
+              <div class="arch-block-label">LSTM 1 — 128 unités</div>
+              <div class="arch-block-desc">
+                return_sequences=True → sortie (batch, 60, 128)
+              </div>
+              <div class="arch-block-shape">→ Dropout(0.3)</div>
+            </div>
+            <div class="arch-arrow">↓</div>
+            <div class="arch-block conv-block">
+              <div class="arch-block-label">LSTM 2 — 64 unités</div>
+              <div class="arch-block-desc">
+                return_sequences=False → dernier état caché (batch, 64)
+              </div>
+              <div class="arch-block-shape">→ Dropout(0.3)</div>
+            </div>
+            <div class="arch-arrow">↓</div>
+            <div class="arch-block dense-block">
+              <div class="arch-block-label">Dense — 32 neurones</div>
+              <div class="arch-block-desc">
+                activation=relu → Dropout(0.1)
+              </div>
+            </div>
+            <div class="arch-arrow">↓</div>
+            <div class="arch-block output-block">
+              <div class="arch-block-label">Sortie</div>
+              <div class="arch-block-desc">
+                Dense(1) — Prix normalisé J+1 → inverse_transform → $
+              </div>
+            </div>
+          </div>
+
+          <!-- Infos techniques LSTM -->
+          <div class="arch-info">
+            <div class="info-card">
+              <h3 class="info-title"> Compilation</h3>
+              <div class="info-row">
+                <span class="info-key">Optimiseur</span>
+                <span class="info-val">Adam (lr=0.001)</span>
+              </div>
+              <div class="info-row">
+                <span class="info-key">Perte</span>
+                <span class="info-val">MSE (régression)</span>
+              </div>
+              <div class="info-row">
+                <span class="info-key">Métrique</span>
+                <span class="info-val">MAE + MSE</span>
+              </div>
+            </div>
+            <div class="info-card">
+              <h3 class="info-title"> Données</h3>
+              <div class="info-row">
+                <span class="info-key">Source</span>
+                <span class="info-val">Yahoo Finance</span>
+              </div>
+              <div class="info-row">
+                <span class="info-key">Ticker</span>
+                <span class="info-val">TSLA</span>
+              </div>
+              <div class="info-row">
+                <span class="info-key">Période</span>
+                <span class="info-val">2019 → 2024</span>
+              </div>
+              <div class="info-row">
+                <span class="info-key">Jours</span>
+                <span class="info-val">1 566 jours</span>
+              </div>
+            </div>
+            <div class="info-card">
+              <h3 class="info-title">Anti-overfitting</h3>
+              <div class="info-row">
+                <span class="info-key">EarlyStopping</span>
+                <span class="info-val">patience=8</span>
+              </div>
+              <div class="info-row">
+                <span class="info-key">Dropout</span>
+                <span class="info-val">0.3 + 0.3 + 0.1</span>
+              </div>
+              <div class="info-row">
+                <span class="info-key">Convergence</span>
+                <span class="info-val">Époque 17 / 30</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+
+  <!-- ========================================================
+       FOOTER
+  ======================================================== -->
+  <footer class="footer">
+    <div class="footer-content">
+      <span class="footer-brand">Deep<span class="accent">CNN</span></span>
+      <span class="footer-sep">·</span>
+      <span>Projet Deep Learning — TensorFlow / Keras</span>
+      <span class="footer-sep">·</span>
+      <span>CIFAR-10 · 84.83% accuracy</span>
+    </div>
+  </footer>
+
+  <!-- Script principal -->
+  <script src="/static/js/main.js"></script>
+
+</body>
+</html>

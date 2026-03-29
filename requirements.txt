@@ -1,0 +1,25 @@
+# ============================================================
+# requirements.txt
+# Liste de toutes les bibliothèques nécessaires au projet
+# ============================================================
+
+# Framework principal de Deep Learning
+tensorflow>=2.15.0
+
+# Calcul scientifique (tableaux, matrices)
+numpy==1.26.4
+
+# Visualisation des courbes et graphiques
+matplotlib==3.8.4
+
+# Prétraitement des données (normalisation MinMaxScaler)
+scikit-learn==1.4.2
+
+# Serveur web pour l'interface utilisateur
+flask==3.0.3
+
+# Gestion des requêtes HTTP entre JS et Python
+flask-cors==4.0.1
+
+# Manipulation d'images (redimensionnement, conversion)
+pillow==10.3.0
